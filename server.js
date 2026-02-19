@@ -1,7 +1,6 @@
 // server.js
 const express = require('express');
 const cors = require('cors');
-const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config();
 
@@ -16,11 +15,6 @@ const pool = new Pool({
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-// Import upload router
-const uploadRouter = require('./upload');
-app.use('/api', uploadRouter); // mount under /api
 
 // Your existing listings routes
 app.post('/api/listings', async (req, res) => {
@@ -48,7 +42,7 @@ app.post('/api/listings', async (req, res) => {
       keywords || [],
       platform || '',
       additionalInfo || '',
-      imageUri || null,
+      imageUri || null,   // will be null because we're not uploading images
       price || null,
     ];
 
