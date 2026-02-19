@@ -1,3 +1,4 @@
+// server.js
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
@@ -15,35 +16,18 @@ const pool = new Pool({
 // Middleware
 app.use(cors());
 app.use(express.json());
-
-// Serve local uploads if needed (optional, mainly for testing)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Mount Cloudinary upload route
-const uploadRouter = require('./upload'); // make sure upload.js is in same folder
-app.use('/api', uploadRouter); // now /api/upload points to Cloudinary upload
+// Import your upload router
+const uploadRouter = require('./upload'); // <-- make sure path is correct
+app.use('/api', uploadRouter); // <-- mount it under /api
 
-// Listings routes
+// Your existing listings routes
 app.post('/api/listings', async (req, res) => {
   try {
-    console.log('BODY:', req.body);
-
     const { title, description, keywords, platform, additionalInfo, imageUri, price } = req.body;
 
-    // imageUri is already the Cloudinary URL sent from frontend
-    const imagePath = imageUri || null;
-
-    let keywordsArray = [];
-    if (keywords) {
-      try {
-        keywordsArray = typeof keywords === 'string' ? JSON.parse(keywords) : keywords;
-      } catch (e) {
-        keywordsArray = [];
-      }
-    }
-
-    const priceValue = price || null;
-
+    // Insert into DB
     const query = `
       INSERT INTO listings(
         title,
@@ -62,11 +46,11 @@ app.post('/api/listings', async (req, res) => {
     const values = [
       title || '',
       description || '',
-      keywordsArray,
+      keywords || [],
       platform || '',
       additionalInfo || '',
-      imagePath,
-      priceValue,
+      imageUri || null, // Cloudinary URL
+      price || null,
     ];
 
     const result = await pool.query(query, values);
@@ -81,11 +65,7 @@ app.post('/api/listings', async (req, res) => {
 app.get('/api/listings', async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM listings ORDER BY createdat DESC');
-    const listings = result.rows.map((row) => ({
-      ...row,
-      keywords: row.keywords || [],
-    }));
-    res.json(listings);
+    res.json(result.rows);
   } catch (err) {
     console.error('DB fetch error', err);
     res.status(500).json({ message: 'Internal server error', error: err.message });
