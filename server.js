@@ -1,6 +1,5 @@
 const express = require('express');
 const cors = require('cors');
-const multer = require('multer');
 const path = require('path');
 const { Pool } = require('pg');
 require('dotenv').config();
@@ -16,35 +15,23 @@ const pool = new Pool({
 // Middleware
 app.use(cors());
 app.use(express.json());
+
+// Serve local uploads if needed (optional, mainly for testing)
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Multer setup
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(__dirname, 'uploads'));
-  },
-  filename: (req, file, cb) => {
-    const name = `${Date.now()}-${file.originalname}`;
-    cb(null, name);
-  },
-});
-const upload = multer({ storage });
+// Mount Cloudinary upload route
+const uploadRouter = require('./upload'); // make sure upload.js is in same folder
+app.use('/api', uploadRouter); // now /api/upload points to Cloudinary upload
 
-// Routes
-app.post('/api/listings', upload.single('image'), async (req, res) => {
+// Listings routes
+app.post('/api/listings', async (req, res) => {
   try {
     console.log('BODY:', req.body);
-    console.log('FILE:', req.file);
 
     const { title, description, keywords, platform, additionalInfo, imageUri, price } = req.body;
 
-    // If mobile: use Multer file, otherwise use imageUri from web
-    let imagePath = null;
-    if (req.file) {
-      imagePath = `/uploads/${req.file.filename}`;
-    } else if (imageUri) {
-      imagePath = imageUri; // web browser sends blob URL
-    }
+    // imageUri is already the Cloudinary URL sent from frontend
+    const imagePath = imageUri || null;
 
     let keywordsArray = [];
     if (keywords) {
@@ -55,7 +42,6 @@ app.post('/api/listings', upload.single('image'), async (req, res) => {
       }
     }
 
-    // Ensure price is a string or null
     const priceValue = price || null;
 
     const query = `
