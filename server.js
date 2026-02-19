@@ -18,9 +18,22 @@ app.use(cors());
 app.use(express.json());
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
-// Import your upload router
-const uploadRouter = require('./upload'); // <-- make sure path is correct
-app.use('/api', uploadRouter); // <-- mount it under /api
+// Import upload router (make sure the path is correct)
+const uploadRouter = require('./upload'); // <-- assumes upload.js is in same folder
+app.use('/api', uploadRouter); // mount under /api
+
+// Log all registered routes (optional, for debugging)
+app._router.stack.forEach((r) => {
+  if (r.route && r.route.path) {
+    console.log(`Route: ${Object.keys(r.route.methods)} ${r.route.path}`);
+  } else if (r.name === 'router' && r.handle.stack) {
+    r.handle.stack.forEach((handler) => {
+      if (handler.route) {
+        console.log(`Route: ${Object.keys(handler.route.methods)} /api${handler.route.path}`);
+      }
+    });
+  }
+});
 
 // Your existing listings routes
 app.post('/api/listings', async (req, res) => {
